@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -e
+TOP=$(git rev-parse --show-toplevel)
+cd "$TOP"
+bash "$(pwd)/.githooks/go-fmt.sh"
+bash "$(pwd)/.githooks/golangci.sh"
+exit 0
+

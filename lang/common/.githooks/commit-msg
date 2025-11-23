@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+MSG_FILE=$1
+MSG=$(cat $MSG_FILE)
+# Conventional commits: type(scope?): subject
+if ! echo "$MSG" | grep -E "^(feat|fix|docs|style|refactor|perf|test|chore)(\([a-z0-9_-]+\))?: .{1,72}" >/dev/null; then
+  echo "Commit message does not follow Conventional Commits format."
+  echo "Example: feat(auth): add refresh token rotation"
+  exit 1
+fi
+

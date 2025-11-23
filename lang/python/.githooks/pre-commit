@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -e
+TOP=$(git rev-parse --show-toplevel)
+if ! command -v black &>/dev/null; then
+  echo "black not installed. Run: scripts/install-python-tools.sh"
+  exit 1
+fi
+echo "-> Running black check"
+black --check . || { echo 'Run: black .' ; exit 1; }
+if command -v flake8 &>/dev/null; then
+  flake8 || true
+fi
+exit 0
+

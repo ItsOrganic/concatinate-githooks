@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# git-conclone: clones target repo and installs hooks from centralized hooks repo (SSH)
+#
+# Usage:
+#  git-conclone [<lang>] <repo-url> [<dir>]
+# Examples:
+#  git-conclone go git@github.com:concatinate/user-service.git
+#  git-conclone git@github.com:concatinate/docs.git
+#
+HOOKS_REPO="git@github.com:concatinate/concatinate-githooks.git"
+
+prog=$(basename "$0")
+if [ "$#" -lt 1 ]; then
+  echo "Usage: $prog [<lang>] <repo-url> [<dir>]"; exit 1
+fi
+
+# if first arg looks like a repo url, treat it as normal clone
+if [[ "$1" == git@* || "$1" == https:* ]]; then
+  repo="$1"; dir="${2:-}"; git clone "$repo" "$dir"; exit 0
+fi
+
+lang="$1"; repo="$2"; dir="${3:-}"
+if [ -z "$repo" ]; then
+  echo "Repo URL required"; exit 1
+fi
+if [ -z "$dir" ]; then
+  dir=$(basename "$repo" .git)
+fi
+
+echo "Cloning repo: $repo -> $dir"
+git clone "$repo" "$dir"
+cd "$dir"
+
+TMP_DIR=$(mktemp -d)
+echo "Fetching hooks repo into $TMP_DIR..."
+git clone "$HOOKS_REPO" "$TMP_DIR" || {
+  echo "Failed to fetch $HOOKS_REPO via SSH. If you want local-only install, run scripts/bootstrap.sh after cloning."
+  rm -rf "$TMP_DIR"
+  exit 1
+}
+
+# install common hooks
+mkdir -p .githooks
+cp -r "$TMP_DIR/lang/common/.githooks/"* .githooks/ 2>/dev/null || true
+
+# use provided lang or try detection
+if [ -z "$lang" ]; then
+  if [ -f go.mod ]; then lang=go
+  elif [ -f package.json ]; then lang=nodejs
+  elif [ -f pyproject.toml ] || [ -f requirements.txt ]; then lang=python
+  fi
+fi
+
+if [ -n "$lang" ]; then
+  echo "Installing language hooks for: $lang"
+  cp -r "$TMP_DIR/lang/$lang/.githooks/"* .githooks/ 2>/dev/null || true
+fi
+
+# copy rules
+cp -r "$TMP_DIR/rules" . 2>/dev/null || true
+
+echo "lang=$lang" > .githooks/props
+git config core.hooksPath .githooks || true
+chmod -R +x .githooks/* || true
+
+# cleanup
+rm -rf "$TMP_DIR"
+git add . >/dev/null 2>&1 || true
+echo "Repository cloned and hooks installed (lang=$lang)"
+

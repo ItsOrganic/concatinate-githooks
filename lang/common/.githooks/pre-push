@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -e
+TOP=$(git rev-parse --show-toplevel)
+
+# run short tests quickly
+if [ -f "$TOP/go.mod" ] && command -v go &>/dev/null; then
+  echo "-> Running quick go tests (short)"
+  go test ./... -run Test -short -count=1 || true
+fi
+
+if [ -f "$TOP/package.json" ] && command -v npm &>/dev/null; then
+  echo "-> Running quick npm test (if present)"
+  npm test --silent || true
+fi
+
+exit 0
+

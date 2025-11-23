@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -e
+bash ../go/.githooks/pre-commit
+if [ -f openapi.yaml ] || [ -f openapi.yml ]; then
+  if command -v spectral &>/dev/null; then
+    spectral lint openapi.yaml || spectral lint openapi.yml || true
+  fi
+fi
+

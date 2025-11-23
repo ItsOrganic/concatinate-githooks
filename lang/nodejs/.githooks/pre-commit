@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -e
+TOP=$(git rev-parse --show-toplevel)
+if [ -f package.json ] && command -v npm &>/dev/null; then
+  if jq -e '.scripts.lint' package.json >/dev/null 2>&1; then
+    echo "-> Running npm lint"
+    npm run -s lint || true
+  fi
+fi
+

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# common pre-commit: quick checks, defer heavy checks to pre-push or CI
+set -e
+TOP=$(git rev-parse --show-toplevel)
+
+# run repo-specific precommit runner if present
+if [ -f "$TOP/scripts/pre-commit-run.sh" ]; then
+  bash "$TOP/scripts/pre-commit-run.sh"
+fi
+
+# go formatting fallback (only check)
+if [ -f "$TOP/go.mod" ] && command -v go &>/dev/null; then
+  echo "-> gofmt check"
+  if [ -n "$(gofmt -l .)" ]; then
+    echo "gofmt found files needing formatting. Run: gofmt -w ."
+    exit 1
+  fi
+fi
+
+# python formatting fallback
+if [ -f "$TOP/pyproject.toml" ] && command -v black &>/dev/null; then
+  echo "-> black check"
+  black --check . || { echo 'Run: black .' ; exit 1; }
+fi
+
+# node fallback: run lint if lint script exists
+if [ -f "$TOP/package.json" ] && command -v npm &>/dev/null; then
+  if jq -e '.scripts.lint' package.json >/dev/null 2>&1; then
+    echo "-> npm lint (best-effort)"
+    npm run -s lint || true
+  fi
+fi
+
+exit 0
+
